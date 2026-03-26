@@ -71,10 +71,10 @@ This is the same partitioning strategy used internally by IVF indexes (Milvus's 
 ## V1 Stage Tasks
 
 ### Stage 0 — Project Setup
-- [ ] Initialize Cargo workspace with crates: `coordinator`, `shard`, `common`, `client`
-- [ ] Define shared types in `common`: `Vector`, `VectorId`, `Centroid`, `ShardId`, `SearchResult`
-- [ ] Set up inter-node communication (start with gRPC via `tonic`, or raw TCP with `tokio`)
-- [ ] Write a basic health-check ping between coordinator and a shard node
+- [x] Initialize Cargo workspace with crates: `coordinator`, `shard`, `common`, `client`
+- [x] Define shared types in `common`: `Vector`, `VectorId`, `Centroid`, `ShardId`, `SearchResult`
+- [x] Set up inter-node communication (start with gRPC via `tonic`, or raw TCP with `tokio`)
+- [x] Write a basic health-check ping between coordinator and a shard node
 
 ### Stage 1 — Single-Node Vector Store
 - [ ] Implement flat vector storage: `Vec<(VectorId, Vec<f32>)>` backed by a memory-mapped binary file (`memmap2`)

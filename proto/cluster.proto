@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package cluster;
+
+// ClusterService is the core RPC interface between coordinator and shards.
+// For now it only exposes Ping, but Insert and Search will be added in Stage 5.
+service ClusterService {
+  rpc Ping (PingRequest) returns (PingResponse);
+}
+
+message PingRequest {
+  string sender = 1;   // e.g. "coordinator"
+}
+
+message PingResponse {
+  string shard_id = 1; // e.g. "shard-0"
+  bool   ok       = 2;
+}

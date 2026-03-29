@@ -1,4 +1,6 @@
-// shard/src/main.rs
+use std::{env, path::PathBuf, sync::Arc};
+
+use shard::state::ShardState;
 use tonic::{transport::Server, Request, Response, Status};
 
 // Pull in the generated types for the `cluster` proto package.
@@ -14,6 +16,7 @@ use cluster::{
 #[derive(Debug)]
 pub struct ShardNode {
     shard_id: String,
+    _state: Arc<ShardState>,
 }
 
 #[tonic::async_trait]
@@ -37,14 +40,42 @@ impl ClusterService for ShardNode {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // In Stage 5, shard_id and port will come from CLI args or config.
-    let shard_id = "shard-0".to_string();
-    let addr = "127.0.0.1:50051".parse()?;
+    let shard_id = env::var("SHARD_ID").unwrap_or_else(|_| "shard-0".to_string());
+    let addr = env::var("SHARD_ADDR")
+        .unwrap_or_else(|_| "127.0.0.1:50051".to_string())
+        .parse()?;
+    let store_path = env::var("SHARD_STORE_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(format!("{shard_id}.vectors.bin")));
+    let dimension = env::var("SHARD_DIMENSION")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(128);
+    let initial_capacity = env::var("SHARD_INITIAL_CAPACITY")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(1_024);
 
-    println!("[{}] listening on {}", shard_id, addr);
+    let state = Arc::new(ShardState::open_or_create(
+        &store_path,
+        dimension,
+        initial_capacity,
+    )?);
+
+    println!(
+        "[{}] listening on {} with store {} (dim={}, capacity={})",
+        shard_id,
+        addr,
+        store_path.display(),
+        dimension,
+        initial_capacity,
+    );
 
     Server::builder()
-        .add_service(ClusterServiceServer::new(ShardNode { shard_id }))
+        .add_service(ClusterServiceServer::new(ShardNode {
+            shard_id,
+            _state: state,
+        }))
         .serve(addr)
         .await?;
 

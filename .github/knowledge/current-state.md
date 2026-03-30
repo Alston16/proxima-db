@@ -35,13 +35,25 @@
   - `SHARD_INITIAL_CAPACITY`
 - `Ping` behavior remains unchanged.
 
+## Code Quality Conventions
+
+These conventions are now enforced across the codebase and must be followed in
+all future contributions (see `.github/instructions/code-quality.md`):
+
+- **Documentation** — every public item has a `///` doc comment; all
+  `Result`-returning public functions include a `# Errors` section.
+- **Tests** — tests live in `<crate>/tests/<module>.rs` integration test files;
+  inline `#[cfg(test)]` blocks inside source files are not used.
+
 ## Test Coverage Snapshot
-- Storage unit tests currently cover:
+
+Tests live under `shard/tests/` (integration test files):
+- `shard/tests/storage.rs` covers:
   - create and reopen
   - capacity growth
   - dimension mismatch validation
   - batch insert order
-- Shard state test covers persistence through state-owned store.
+- `shard/tests/state.rs` covers persistence through state-owned store.
 
 ## Open Work (Stage 1)
 - Implement brute-force k-NN search

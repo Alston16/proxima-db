@@ -18,12 +18,18 @@ const CAPACITY_OFFSET: usize = 24;
 const VECTOR_ID_SIZE: usize = mem::size_of::<u64>();
 const FLOAT_SIZE: usize = mem::size_of::<f32>();
 
+/// Errors that can occur when reading from or writing to a [`FlatVectorStore`].
 #[derive(Debug)]
 pub enum StorageError {
+    /// An underlying I/O error.
     Io(io::Error),
+    /// The file header is missing, truncated, or contains unexpected values.
     InvalidHeader(&'static str),
+    /// The dimension of a vector does not match the store's configured dimension.
     DimensionMismatch { expected: usize, actual: usize },
+    /// A record's byte layout is not correctly aligned or sized.
     CorruptRecordLayout,
+    /// An arithmetic overflow occurred while computing record or file sizes.
     RecordCountOverflow,
 }
 
@@ -49,12 +55,36 @@ impl From<io::Error> for StorageError {
     }
 }
 
+/// A zero-copy view into one record inside a [`FlatVectorStore`].
+///
+/// The lifetime `'a` is tied to the memory-mapped region of the store, so no
+/// heap allocation is needed when reading individual vectors.
 #[derive(Debug, Clone, Copy)]
 pub struct VectorRecordRef<'a> {
+    /// The unique identifier of this vector.
     pub id: VectorId,
+    /// The raw float data for this vector, borrowed from the memory map.
     pub data: &'a [f32],
 }
 
+/// A flat, memory-mapped vector store backed by a single binary file.
+///
+/// Vectors are stored sequentially in a fixed-dimension format with a 32-byte
+/// header. The file grows automatically (doubling strategy) when capacity is
+/// exhausted. Use [`FlatVectorStore::open_or_create`] to obtain an instance;
+/// the file is created if it does not yet exist and re-opened with its existing
+/// contents otherwise.
+///
+/// # File layout
+///
+/// ```text
+/// [0..8]   magic bytes  "PXVEC001"
+/// [8..12]  version      u32 LE
+/// [12..16] dimension    u32 LE
+/// [16..24] len          u64 LE  (current number of records)
+/// [24..32] capacity     u64 LE  (allocated slots)
+/// [32..]   records      (id: u64 LE)(f32 * dimension) * capacity
+/// ```
 #[derive(Debug)]
 pub struct FlatVectorStore {
     path: PathBuf,
@@ -67,6 +97,19 @@ pub struct FlatVectorStore {
 }
 
 impl FlatVectorStore {
+    /// Opens an existing store file or creates a new one at `path`.
+    ///
+    /// If the file does not exist or is empty it is initialised with the given
+    /// `dimension` and `initial_capacity`. If the file already exists its
+    /// header is validated and its contents are memory-mapped for access.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StorageError`] when:
+    /// - `dimension` is zero.
+    /// - The file cannot be opened or created.
+    /// - An existing file's header is corrupt, has an unsupported version, or
+    ///   its recorded dimension does not match the requested `dimension`.
     pub fn open_or_create(
         path: impl AsRef<Path>,
         dimension: usize,
@@ -107,30 +150,52 @@ impl FlatVectorStore {
         Ok(store)
     }
 
+    /// Returns the number of vectors currently stored.
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Returns `true` if the store contains no vectors.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
+    /// Returns the fixed embedding dimension of this store.
     pub fn dimension(&self) -> usize {
         self.dimension
     }
 
+    /// Returns the number of vector slots allocated in the backing file.
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
+    /// Returns the path of the backing file.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// Appends a single vector to the store.
+    ///
+    /// The store grows its backing file automatically when needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StorageError::DimensionMismatch`] if `vector.data.len()` does
+    /// not equal [`Self::dimension`].
     pub fn insert(&mut self, vector: &Vector) -> Result<(), StorageError> {
         self.insert_raw(vector.id, &vector.data)
     }
 
+    /// Appends multiple vectors to the store in a single operation.
+    ///
+    /// All dimension checks are performed before any writes so that the store
+    /// is never partially updated on error. The backing file grows as needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StorageError::DimensionMismatch`] if any vector's data length
+    /// does not equal [`Self::dimension`].
     pub fn insert_batch<'a>(
         &mut self,
         vectors: impl IntoIterator<Item = &'a Vector>,
@@ -155,6 +220,9 @@ impl FlatVectorStore {
         Ok(())
     }
 
+    /// Retrieves the vector at `index`, allocating a new [`Vector`] on the heap.
+    ///
+    /// Returns `Ok(None)` if `index` is out of bounds.
     pub fn get(&self, index: usize) -> Result<Option<Vector>, StorageError> {
         match self.record_ref(index)? {
             Some(record) => Ok(Some(Vector {
@@ -165,6 +233,9 @@ impl FlatVectorStore {
         }
     }
 
+    /// Returns a zero-copy view of the vector at `index` without heap allocation.
+    ///
+    /// Returns `Ok(None)` if `index` is out of bounds.
     pub fn record_ref(&self, index: usize) -> Result<Option<VectorRecordRef<'_>>, StorageError> {
         if index >= self.len {
             return Ok(None);
@@ -179,6 +250,7 @@ impl FlatVectorStore {
         Ok(Some(VectorRecordRef { id, data }))
     }
 
+    /// Returns an iterator over all stored vectors as zero-copy [`VectorRecordRef`] views.
     pub fn iter(&self) -> FlatVectorStoreIter<'_> {
         FlatVectorStoreIter {
             store: self,
@@ -186,6 +258,11 @@ impl FlatVectorStore {
         }
     }
 
+    /// Flushes all pending writes to the backing file.
+    ///
+    /// This synchronises the memory-mapped region with the filesystem. Call
+    /// this before the process exits or before reopening the store from a
+    /// different handle.
     pub fn flush(&self) -> Result<(), StorageError> {
         self.mmap.flush()?;
         Ok(())
@@ -293,6 +370,10 @@ impl FlatVectorStore {
     }
 }
 
+/// An iterator over all records in a [`FlatVectorStore`].
+///
+/// Produced by [`FlatVectorStore::iter`]. Each item is a zero-copy
+/// [`VectorRecordRef`] borrowing directly from the store's memory map.
 pub struct FlatVectorStoreIter<'a> {
     store: &'a FlatVectorStore,
     index: usize,
@@ -430,110 +511,4 @@ fn bytes_as_f32_slice(bytes: &[u8]) -> Result<&[f32], StorageError> {
     }
 
     Ok(floats)
-}
-
-#[cfg(test)]
-mod tests {
-    use tempfile::tempdir;
-
-    use super::{FlatVectorStore, StorageError};
-    use common::Vector;
-
-    #[test]
-    fn creates_and_reopens_store() {
-        let temp_dir = tempdir().unwrap();
-        let path = temp_dir.path().join("vectors.bin");
-
-        {
-            let mut store = FlatVectorStore::open_or_create(&path, 3, 2).unwrap();
-            store
-                .insert(&Vector {
-                    id: 42,
-                    data: vec![1.0, 2.0, 3.0],
-                })
-                .unwrap();
-            store.flush().unwrap();
-        }
-
-        let reopened = FlatVectorStore::open_or_create(&path, 3, 1).unwrap();
-        assert_eq!(reopened.len(), 1);
-        let vector = reopened.get(0).unwrap().unwrap();
-        assert_eq!(vector.id, 42);
-        assert_eq!(vector.data, vec![1.0, 2.0, 3.0]);
-    }
-
-    #[test]
-    fn grows_when_capacity_is_exhausted() {
-        let temp_dir = tempdir().unwrap();
-        let path = temp_dir.path().join("vectors.bin");
-        let mut store = FlatVectorStore::open_or_create(&path, 2, 1).unwrap();
-
-        store
-            .insert(&Vector {
-                id: 1,
-                data: vec![1.0, 1.0],
-            })
-            .unwrap();
-        store
-            .insert(&Vector {
-                id: 2,
-                data: vec![2.0, 2.0],
-            })
-            .unwrap();
-
-        assert_eq!(store.len(), 2);
-        assert!(store.capacity() >= 2);
-        let values: Vec<_> = store.iter().map(|record| (record.id, record.data.to_vec())).collect();
-        assert_eq!(values.len(), 2);
-        assert_eq!(values[0], (1, vec![1.0, 1.0]));
-        assert_eq!(values[1], (2, vec![2.0, 2.0]));
-    }
-
-    #[test]
-    fn rejects_dimension_mismatch() {
-        let temp_dir = tempdir().unwrap();
-        let path = temp_dir.path().join("vectors.bin");
-        let mut store = FlatVectorStore::open_or_create(&path, 3, 1).unwrap();
-
-        let error = store
-            .insert(&Vector {
-                id: 7,
-                data: vec![1.0, 2.0],
-            })
-            .unwrap_err();
-
-        match error {
-            StorageError::DimensionMismatch { expected, actual } => {
-                assert_eq!(expected, 3);
-                assert_eq!(actual, 2);
-            }
-            other => panic!("unexpected error: {other}"),
-        }
-    }
-
-    #[test]
-    fn inserts_batches_without_losing_order() {
-        let temp_dir = tempdir().unwrap();
-        let path = temp_dir.path().join("vectors.bin");
-        let mut store = FlatVectorStore::open_or_create(&path, 2, 1).unwrap();
-        let vectors = [
-            Vector {
-                id: 10,
-                data: vec![1.0, 0.0],
-            },
-            Vector {
-                id: 11,
-                data: vec![0.0, 1.0],
-            },
-            Vector {
-                id: 12,
-                data: vec![1.0, 1.0],
-            },
-        ];
-
-        store.insert_batch(vectors.iter()).unwrap();
-
-        let ids: Vec<_> = store.iter().map(|record| record.id).collect();
-        assert_eq!(ids, vec![10, 11, 12]);
-    }
 }

@@ -1,7 +1,9 @@
 use std::path::Path;
 
+use common::SearchResult;
 use tokio::sync::Mutex;
 
+use crate::distance::DistanceMetric;
 use crate::storage::{FlatVectorStore, StorageError};
 
 /// Thread-safe state for a single shard node.
@@ -32,5 +34,25 @@ impl ShardState {
         Ok(Self {
             store: Mutex::new(store),
         })
+    }
+
+    /// Searches for the `k` nearest vectors to `query` using brute-force scan.
+    ///
+    /// Acquires the store lock and delegates to
+    /// [`FlatVectorStore::search_topk`]. Results are sorted by ascending
+    /// distance with ties broken by ascending [`common::VectorId`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StorageError::DimensionMismatch`] if `query.len()` does not
+    /// match the store's configured dimension.
+    pub async fn search_topk(
+        &self,
+        query: &[f32],
+        k: usize,
+        metric: DistanceMetric,
+    ) -> Result<Vec<SearchResult>, StorageError> {
+        let store = self.store.lock().await;
+        store.search_topk(query, k, metric)
     }
 }

@@ -78,9 +78,9 @@ This is the same partitioning strategy used internally by IVF indexes (Milvus's 
 
 ### Stage 1 — Single-Node Vector Store
 - [x] Implement flat vector storage: `Vec<(VectorId, Vec<f32>)>` backed by a memory-mapped binary file (`memmap2`)
-- [ ] Implement brute-force k-NN search (L2 and cosine distance) with SIMD distance via `simsimd` or manual `std::arch` AVX2 intrinsics
-- [ ] Write unit tests: insert N vectors, query top-k, verify results against a naive reference implementation
-- [ ] Benchmark single-node QPS and latency baseline
+- [x] Implement brute-force k-NN search (L2 and cosine distance) with SIMD distance via `simsimd` or manual `std::arch` AVX2 intrinsics
+- [x] Write unit tests: insert N vectors, query top-k, verify results against a naive reference implementation
+- [x] Benchmark single-node QPS and latency baseline
 
 ### Stage 2 — Centroid Table & Partition Assignment
 - [ ] Implement k-means clustering (`K` configurable, e.g. 64–512) on a training corpus using the `linfa` crate or a custom mini-batch k-means

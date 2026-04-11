@@ -1,0 +1,41 @@
+name: Benchmark Baseline
+
+# Runs on every push to main and saves a named Criterion baseline as a
+# GitHub Actions artifact so that PRs can download and compare against it.
+
+on:
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  baseline:
+    name: Save benchmark baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install critcmp
+        run: cargo install critcmp --locked
+
+      - name: Run benchmarks and save baseline
+        run: cargo bench -p shard --bench search_bench -- --save-baseline main
+
+      - name: Upload criterion baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-baseline-main
+          # Criterion stores named baselines inside target/criterion/
+          path: target/criterion
+          retention-days: 90
+          if-no-files-found: error

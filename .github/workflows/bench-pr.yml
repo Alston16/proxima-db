@@ -1,0 +1,90 @@
+name: Benchmark PR Comparison
+
+# On every PR targeting main:
+#   1. Download the Criterion baseline saved by bench-baseline.yml from main.
+#   2. Run the same benchmarks with --save-baseline current.
+#   3. Compare with critcmp and post (or update) a sticky PR comment.
+#
+# If no baseline exists yet (first ever run), the comment states so; the
+# baseline is established once the PR merges and bench-baseline.yml runs.
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  pull-requests: write   # post/update the sticky comment
+  actions: read          # dawidd6/action-download-artifact needs this to list runs
+
+jobs:
+  compare:
+    name: Compare benchmarks against main
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install critcmp
+        run: cargo install critcmp --locked
+
+      # Restore the baseline that bench-baseline.yml saved on the latest main push.
+      # continue-on-error so the workflow keeps going when no baseline exists yet.
+      - name: Download baseline from main
+        id: download
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: bench-baseline.yml
+          branch: main
+          name: criterion-baseline-main
+          path: target/criterion
+        continue-on-error: true
+
+      - name: Run PR benchmarks
+        run: cargo bench -p shard --bench search_bench -- --save-baseline current
+
+      - name: Compare against baseline
+        id: compare
+        run: |
+          if [ "${{ steps.download.outcome }}" = "success" ]; then
+            critcmp main current 2>&1 | tee bench_comparison.txt
+            echo "has_baseline=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No baseline found — will be established after this PR merges." \
+              | tee bench_comparison.txt
+            echo "has_baseline=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build comment body
+        run: |
+          {
+            echo "## Benchmark Results"
+            echo ""
+            if [ "${{ steps.compare.outputs.has_baseline }}" = "true" ]; then
+              echo "Comparison of this PR against the \`main\` baseline (via [critcmp](https://github.com/BurntSushi/critcmp)):"
+            else
+              echo "> **No baseline available yet.**"
+              echo "> Merge this PR to run \`bench-baseline.yml\` and establish the first baseline."
+            fi
+            echo ""
+            echo '```'
+            cat bench_comparison.txt
+            echo '```'
+            echo ""
+            echo "<sub>Benchmarks: \`cargo bench -p shard --bench search_bench\`</sub>"
+          } > comment_body.md
+
+      - name: Post benchmark comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: benchmarks
+          path: comment_body.md

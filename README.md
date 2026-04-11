@@ -25,24 +25,22 @@ This is the same partitioning strategy used internally by IVF indexes (Milvus's 
 
 ## Architecture Overview
 
-```
-                        ┌─────────────────────┐
-                        │     Coordinator      │
-                        │  (centroid table +   │
-                        │   query router)      │
-                        └────────┬────────────┘
-                 ┌───────────────┼───────────────┐
-                 ▼               ▼               ▼
-           ┌─────────┐     ┌─────────┐     ┌─────────┐
-           │ Shard 0  │     │ Shard 1  │     │ Shard N  │
-           │Voronoi 0 │     │Voronoi 1 │     │Voronoi N │
-           │local HNSW│     │local HNSW│     │local HNSW│
-           └─────────┘     └─────────┘     └─────────┘
-                 ▲
-           ┌─────────┐
-           │ Staging  │  ← cold start buffer (pre-centroid)
-           │  Shard   │
-           └─────────┘
+```mermaid
+flowchart TD
+    C["Coordinator\n(centroid table + query router)"]
+
+    S0["Shard 0\nVoronoi 0 · local HNSW"]
+    S1["Shard 1\nVoronoi 1 · local HNSW"]
+    SN["Shard N\nVoronoi N · local HNSW"]
+    ST["Staging Shard\ncold start buffer (pre-centroid)"]
+
+    C --> ST
+    C --> S0
+    C --> S1
+    C --> SN
+    ST -->|"bulk-assign on threshold"| S0
+    ST -->|"bulk-assign on threshold"| S1
+    ST -->|"bulk-assign on threshold"| SN
 ```
 
 **Write path:** coordinator assigns each vector to its top-2 nearest centroids → writes to 2 shards (soft assignment).

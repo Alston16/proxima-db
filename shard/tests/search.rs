@@ -51,7 +51,7 @@ fn naive_search(
                     if na == 0.0 || nb == 0.0 {
                         1.0
                     } else {
-                        (1.0 - (dot / (na * nb)).clamp(-1.0, 1.0))
+                        1.0 - (dot / (na * nb)).clamp(-1.0, 1.0)
                     }
                 }
             };

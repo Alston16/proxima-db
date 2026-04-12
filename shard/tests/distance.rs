@@ -1,8 +1,8 @@
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use shard::distance::{
-    DistanceBackend, cosine_distance, cosine_distance_with_backend, l2_distance,
-    l2_distance_with_backend,
+    DistanceBackend, cosine_distance, cosine_distance_simd, cosine_distance_with_backend,
+    l2_distance, l2_distance_simd, l2_distance_with_backend,
 };
 
 #[test]
@@ -59,6 +59,22 @@ fn cosine_zero_norm_vector_returns_one() {
     let other = [1.0_f32, 2.0, 3.0];
     assert_eq!(cosine_distance(&zero, &other), 1.0);
     assert_eq!(cosine_distance(&other, &zero), 1.0);
+}
+
+#[test]
+#[should_panic(expected = "slice length mismatch")]
+fn l2_simd_panics_on_mismatched_lengths() {
+    let a = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let b = [1.0_f32, 2.0, 3.0];
+    l2_distance_simd(&a, &b);
+}
+
+#[test]
+#[should_panic(expected = "slice length mismatch")]
+fn cosine_simd_panics_on_mismatched_lengths() {
+    let a = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let b = [1.0_f32, 2.0, 3.0];
+    cosine_distance_simd(&a, &b);
 }
 
 #[test]

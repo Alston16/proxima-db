@@ -90,9 +90,9 @@ pub fn l2_distance_scalar(a: &[f32], b: &[f32]) -> f32 {
 ///
 /// # Panics
 ///
-/// Panics in debug builds if `a.len() != b.len()`.
+/// Panics if `a.len() != b.len()`.
 pub fn l2_distance_simd(a: &[f32], b: &[f32]) -> f32 {
-    debug_assert_eq!(a.len(), b.len(), "l2_distance_simd: slice length mismatch");
+    assert_eq!(a.len(), b.len(), "l2_distance_simd: slice length mismatch");
 
     if a.len() < LANES {
         return l2_distance_scalar(a, b);
@@ -146,9 +146,9 @@ pub fn cosine_distance_scalar(a: &[f32], b: &[f32]) -> f32 {
 ///
 /// # Panics
 ///
-/// Panics in debug builds if `a.len() != b.len()`.
+/// Panics if `a.len() != b.len()`.
 pub fn cosine_distance_simd(a: &[f32], b: &[f32]) -> f32 {
-    debug_assert_eq!(a.len(), b.len(), "cosine_distance_simd: slice length mismatch");
+    assert_eq!(a.len(), b.len(), "cosine_distance_simd: slice length mismatch");
 
     if a.len() < LANES {
         return cosine_distance_scalar(a, b);

@@ -3,7 +3,7 @@
 ## Summary
 - Stage 0 is complete.
 - The Stage 1 single-node baseline is functionally complete in the `shard` crate.
-- The implemented baseline includes flat storage, scalar L2/cosine distance functions, brute-force top-k search, integration tests, and Criterion benchmarks.
+- The implemented baseline includes flat storage, SIMD-accelerated L2/cosine distance functions with scalar reference paths, brute-force top-k search, integration tests, and Criterion benchmarks.
 - Stage 2 centroid assignment and distributed routing work has not started yet beyond the shared proto ping skeleton.
 
 ## Implemented Components
@@ -17,7 +17,7 @@
   - sends `PingRequest { sender }`
   - logs the returned `shard_id` and `ok`
 - Shard local search subsystem in `shard`:
-  - `distance.rs` defines `DistanceMetric`, `l2_distance`, and `cosine_distance`
+  - `distance.rs` defines `DistanceMetric`, `DistanceBackend`, scalar and SIMD kernels, plus backend-selectable distance entrypoints
   - `storage.rs` defines `FlatVectorStore`, `VectorRecordRef`, `StorageError`, and brute-force `search_topk`
   - `state.rs` defines `ShardState`, wrapping the store in `tokio::sync::Mutex`
   - `main.rs` boots a tonic server and opens the local vector store from env-backed settings
@@ -31,6 +31,9 @@
 - Brute-force nearest-neighbour search over all records using:
   - `DistanceMetric::L2`
   - `DistanceMetric::Cosine`
+- Distance backend auto-selection in `distance.rs`:
+  - scalar reference path for correctness and short vectors
+  - `wide`-based SIMD path for lane-chunked accumulation with scalar tail handling
 - Deterministic top-k ordering:
   - ascending distance
   - ascending `VectorId` when distances tie
@@ -49,7 +52,7 @@
 - `client/src/main.rs` remains a placeholder.
 
 ## Testing And Benchmark Coverage
-- `shard/tests/distance.rs` covers scalar L2 and cosine distance correctness, including zero-norm cosine handling.
+- `shard/tests/distance.rs` covers scalar correctness, SIMD-vs-scalar parity on odd-tail dimensions, randomized auto-backend parity, and zero-norm cosine handling.
 - `shard/tests/storage.rs` covers create/reopen, growth, dimension validation, and batch insert ordering.
 - `shard/tests/search.rs` covers:
   - empty-store and `k == 0` behavior
@@ -65,9 +68,9 @@
   - cosine: `1k_d128`, `10k_d128`
 
 ## Important Nuance
-- The current local-search implementation is scalar, not SIMD-accelerated.
-- The README Stage 1 checklist marks the search task complete, but the codebase does not yet contain `simsimd` integration or manual `std::arch` intrinsics.
-- Treat SIMD as follow-up optimization work, not part of the currently landed baseline.
+- SIMD is now implemented in `shard/src/distance.rs` through a crate abstraction (`wide`) rather than manual intrinsics.
+- The scalar path remains available as the correctness reference and explicit backend option.
+- Brute-force search orchestration and deterministic top-k ordering in `FlatVectorStore::search_topk()` are unchanged.
 
 ## Code Quality Conventions
 - Public items are expected to carry `///` docs.
@@ -79,5 +82,5 @@
 - Coordinator-owned query routing and write fan-out
 - Search and insert RPC expansion beyond `Ping`
 - Shared configuration and richer error types across crates
-- SIMD optimization for local distance computation
+- Benchmark and tune SIMD speedups against the pre-change Criterion baseline
 - Client API implementation beyond the placeholder binary

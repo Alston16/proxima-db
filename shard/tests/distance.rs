@@ -62,7 +62,7 @@ fn cosine_zero_norm_vector_returns_one() {
 }
 
 #[test]
-#[should_panic(expected = "slice length mismatch")]
+#[should_panic(expected = "l2_distance_simd: slice length mismatch")]
 fn l2_simd_panics_on_mismatched_lengths() {
     let a = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     let b = [1.0_f32, 2.0, 3.0];
@@ -70,7 +70,7 @@ fn l2_simd_panics_on_mismatched_lengths() {
 }
 
 #[test]
-#[should_panic(expected = "slice length mismatch")]
+#[should_panic(expected = "cosine_distance_simd: slice length mismatch")]
 fn cosine_simd_panics_on_mismatched_lengths() {
     let a = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     let b = [1.0_f32, 2.0, 3.0];

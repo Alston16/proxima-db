@@ -24,8 +24,15 @@ Provide a deterministic Stage 1 nearest-neighbour baseline over the flat memory-
 ## Guardrails
 - Validate query dimension before scanning.
 - Return an empty vector for `k == 0` or an empty store.
-- Keep distance functions scalar and side-effect free unless SIMD is explicitly added.
+- Keep distance functions side-effect free and preserve scalar reference behavior when SIMD is enabled.
 - Preserve deterministic ordering so benchmark and parity tests stay stable.
+
+## SIMD Optimization Notes
+- Keep scan orchestration in `FlatVectorStore::search_topk()` unchanged; optimize only metric kernels in `distance.rs`.
+- Use backend-selectable distance entrypoints so tests can compare scalar and SIMD outputs directly.
+- SIMD kernels must support non-lane dimensions via scalar tail handling.
+- Preserve cosine edge semantics (`1.0` for zero-norm vectors) and clamp behavior to avoid ranking regressions.
+- Benchmark comparison should reuse existing Criterion labels and compare against recorded pre-change baseline runs.
 
 ## Why This Pattern
 - Gives the project a trustworthy reference path for search correctness.

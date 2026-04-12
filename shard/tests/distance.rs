@@ -1,4 +1,9 @@
-use shard::distance::{cosine_distance, l2_distance};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
+use shard::distance::{
+    DistanceBackend, cosine_distance, cosine_distance_with_backend, l2_distance,
+    l2_distance_with_backend,
+};
 
 #[test]
 fn l2_identical_vectors_is_zero() {
@@ -54,4 +59,58 @@ fn cosine_zero_norm_vector_returns_one() {
     let other = [1.0_f32, 2.0, 3.0];
     assert_eq!(cosine_distance(&zero, &other), 1.0);
     assert_eq!(cosine_distance(&other, &zero), 1.0);
+}
+
+#[test]
+fn l2_simd_matches_scalar_for_tail_dimensions() {
+    let mut rng = StdRng::seed_from_u64(0xA11CE001);
+    for &dim in &[3_usize, 7, 15, 127, 129, 511] {
+        let a: Vec<f32> = (0..dim).map(|_| rng.gen_range(-1.0_f32..1.0)).collect();
+        let b: Vec<f32> = (0..dim).map(|_| rng.gen_range(-1.0_f32..1.0)).collect();
+
+        let scalar = l2_distance_with_backend(&a, &b, DistanceBackend::Scalar);
+        let simd = l2_distance_with_backend(&a, &b, DistanceBackend::Simd);
+        assert!((scalar - simd).abs() < 1e-5, "dim={dim}: scalar={scalar} simd={simd}");
+    }
+}
+
+#[test]
+fn cosine_simd_matches_scalar_for_tail_dimensions() {
+    let mut rng = StdRng::seed_from_u64(0xA11CE002);
+    for &dim in &[3_usize, 7, 15, 127, 129, 511] {
+        let a: Vec<f32> = (0..dim).map(|_| rng.gen_range(-1.0_f32..1.0)).collect();
+        let b: Vec<f32> = (0..dim).map(|_| rng.gen_range(-1.0_f32..1.0)).collect();
+
+        let scalar = cosine_distance_with_backend(&a, &b, DistanceBackend::Scalar);
+        let simd = cosine_distance_with_backend(&a, &b, DistanceBackend::Simd);
+        assert!((scalar - simd).abs() < 1e-5, "dim={dim}: scalar={scalar} simd={simd}");
+    }
+}
+
+#[test]
+fn l2_auto_backend_matches_scalar_randomized() {
+    let mut rng = StdRng::seed_from_u64(0xA11CE003);
+    for _ in 0..64 {
+        let dim = rng.gen_range(1_usize..256_usize);
+        let a: Vec<f32> = (0..dim).map(|_| rng.gen_range(-0.5_f32..0.5)).collect();
+        let b: Vec<f32> = (0..dim).map(|_| rng.gen_range(-0.5_f32..0.5)).collect();
+
+        let scalar = l2_distance_with_backend(&a, &b, DistanceBackend::Scalar);
+        let auto = l2_distance(&a, &b);
+        assert!((scalar - auto).abs() < 1e-5, "dim={dim}: scalar={scalar} auto={auto}");
+    }
+}
+
+#[test]
+fn cosine_auto_backend_matches_scalar_randomized() {
+    let mut rng = StdRng::seed_from_u64(0xA11CE004);
+    for _ in 0..64 {
+        let dim = rng.gen_range(1_usize..256_usize);
+        let a: Vec<f32> = (0..dim).map(|_| rng.gen_range(-0.5_f32..0.5)).collect();
+        let b: Vec<f32> = (0..dim).map(|_| rng.gen_range(-0.5_f32..0.5)).collect();
+
+        let scalar = cosine_distance_with_backend(&a, &b, DistanceBackend::Scalar);
+        let auto = cosine_distance(&a, &b);
+        assert!((scalar - auto).abs() < 1e-5, "dim={dim}: scalar={scalar} auto={auto}");
+    }
 }

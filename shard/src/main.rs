@@ -1,5 +1,6 @@
 use std::{env, path::PathBuf, sync::Arc};
 
+use shard::distance;
 use shard::state::ShardState;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -55,6 +56,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(1_024);
+    let auto_simd_min_dim = env::var("SHARD_AUTO_SIMD_MIN_DIM")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(distance::DEFAULT_AUTO_SIMD_MIN_DIM);
+
+    distance::set_auto_simd_min_dim(auto_simd_min_dim);
 
     let state = Arc::new(ShardState::open_or_create(
         &store_path,
@@ -63,12 +70,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?);
 
     println!(
-        "[{}] listening on {} with store {} (dim={}, capacity={})",
+        "[{}] listening on {} with store {} (dim={}, capacity={}, auto_simd_min_dim={})",
         shard_id,
         addr,
         store_path.display(),
         dimension,
         initial_capacity,
+        distance::auto_simd_min_dim(),
     );
 
     Server::builder()

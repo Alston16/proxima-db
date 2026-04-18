@@ -1,3 +1,4 @@
+pub mod clustering;
 
 pub mod cluster {
     tonic::include_proto!("cluster");

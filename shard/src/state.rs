@@ -3,7 +3,7 @@ use std::path::Path;
 use common::SearchResult;
 use tokio::sync::Mutex;
 
-use crate::distance::DistanceMetric;
+use common::DistanceMetric;
 use crate::storage::{FlatVectorStore, StorageError};
 
 /// Thread-safe state for a single shard node.

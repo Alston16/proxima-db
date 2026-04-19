@@ -25,8 +25,9 @@ fn make_random_vectors(n: usize, dim: usize, seed: u64) -> Vec<Vector> {
         .collect()
 }
 
-/// Generates well-separated Gaussian blobs: `clusters` groups of `per_cluster`
-/// vectors, each centred at `center_scale * cluster_index` on the first axis.
+/// Generates well-separated uniform-noise blobs: `clusters` groups of
+/// `per_cluster` vectors with each coordinate sampled from `[-0.5, 0.5)`, then
+/// shifted by `center_scale * cluster_index` on the first axis.
 fn make_blob_vectors(
     clusters: usize,
     per_cluster: usize,

@@ -367,25 +367,7 @@ impl cluster_service_server::ClusterService for CoordinatorService {
 
 **File:** `coordinator/Cargo.toml`
 
-```toml
-[dependencies]
-tokio = { version = "1.50", features = ["full"] }
-tonic = "0.14"
-prost = "0.13"
-serde = { version = "1.0", features = ["derive"] }
-bincode = "1.3"
-thiserror = "1.0"
-# ... existing deps ...
-```
-
 **File:** `shard/Cargo.toml`
-
-```toml
-[dependencies]
-serde = { version = "1.0", features = ["derive"] }
-bincode = "1.3"
-# ... existing deps ...
-```
 
 ---
 

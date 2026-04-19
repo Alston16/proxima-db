@@ -64,9 +64,9 @@ pub enum ClusteringError {
     #[error("zero-norm vector at index {index} is invalid for cosine metric")]
     ZeroNormVector { index: usize },
 
-    /// `nprobe` exceeds the number of available centroids.
-    #[error("nprobe={nprobe} exceeds centroid count {n_centroids}")]
-    NprobeTooLarge {
+    /// `nprobe` must be in the range `[1, n_centroids]`.
+    #[error("invalid nprobe={nprobe}: must be in [1, {n_centroids}]")]
+    InvalidNprobe {
         nprobe: usize,
         n_centroids: usize,
     },
@@ -207,10 +207,25 @@ pub fn fit_kmeans(
         .rows()
         .into_iter()
         .enumerate()
-        .map(|(id, row)| Centroid {
-            id: id as u32,
-            data: row.iter().map(|&x| x as f32).collect(),
-            shard_id: 0, // Assigned by CentroidTable in Stage 2 Step 2.
+        .map(|(id, row)| {
+            let mut data: Vec<f32> = row.iter().map(|&x| x as f32).collect();
+
+            // K-means means over unit vectors are not guaranteed to remain unit.
+            // Re-project cosine centroids onto the unit sphere to preserve metric semantics.
+            if config.metric == DistanceMetric::Cosine {
+                let norm = data.iter().map(|x| x * x).sum::<f32>().sqrt();
+                if norm > 0.0 {
+                    for x in &mut data {
+                        *x /= norm;
+                    }
+                }
+            }
+
+            Centroid {
+                id: id as u32,
+                data,
+                shard_id: 0, // Assigned by CentroidTable in Stage 2 Step 2.
+            }
         })
         .collect();
 
@@ -244,7 +259,7 @@ pub fn assign_to_shards(
         return Err(ClusteringError::EmptyInput);
     }
     if nprobe == 0 || nprobe > centroids.len() {
-        return Err(ClusteringError::NprobeTooLarge {
+        return Err(ClusteringError::InvalidNprobe {
             nprobe,
             n_centroids: centroids.len(),
         });

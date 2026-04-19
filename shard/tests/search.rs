@@ -9,7 +9,7 @@
 use common::{SearchResult, Vector};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
-use shard::distance::DistanceMetric;
+use common::distance::DistanceMetric;
 use shard::state::ShardState;
 use shard::storage::FlatVectorStore;
 use tempfile::tempdir;

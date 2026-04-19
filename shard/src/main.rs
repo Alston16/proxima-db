@@ -1,6 +1,6 @@
 use std::{env, path::PathBuf, sync::Arc};
 
-use shard::distance;
+use common::distance;
 use shard::state::ShardState;
 use tonic::{transport::Server, Request, Response, Status};
 

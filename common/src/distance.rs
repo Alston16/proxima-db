@@ -1,15 +1,15 @@
 use wide::f32x8;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// Selects the distance metric used for nearest-neighbour search.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Selects the distance metric used for clustering and nearest-neighbour search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum DistanceMetric {
-    /// Euclidean (L2) distance: `sqrt(Σ(aᵢ − bᵢ)²)`.
+    /// Euclidean (L2) distance.
     L2,
     /// Cosine distance: `1.0 − cosine_similarity`.
     ///
-    /// Values range from `0.0` (identical direction) to `2.0` (opposite
-    /// direction). Zero-norm vectors are treated as maximally distant (`1.0`).
+    /// For clustering, input vectors are L2-normalised before fitting so that
+    /// angular proximity governs centroid placement.
     Cosine,
 }
 

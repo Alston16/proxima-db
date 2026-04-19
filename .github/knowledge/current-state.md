@@ -11,7 +11,7 @@
 ### Common Crate (Shared Types & Utilities)
 - **Types:** `VectorId`, `ShardId`, `Vector`, `Centroid`, `SearchResult`, `DistanceMetric`
 - **Distance metrics** in `distance.rs`:
-  - `euclidean_distance(q: &[f32], v: &[f32]) -> f32` (L2)
+  - `l2_distance(q: &[f32], v: &[f32]) -> f32`
   - `cosine_distance(q: &[f32], v: &[f32]) -> f32`
   - Support for both normalized and raw vectors
 - **Top-k selection** in `topk.rs`:

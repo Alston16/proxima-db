@@ -224,8 +224,10 @@ pub fn fit_kmeans(
 /// **read path** (fan-out to top-`nprobe` shards).
 ///
 /// The `metric` **must** match the one used when the centroids were trained —
-/// in particular, cosine centroids are stored normalised, so `query` is
-/// normalised inside this function before distance is computed.
+/// in particular, cosine centroids are stored normalised. For cosine queries,
+/// this function validates that `query` has non-zero norm before computing
+/// distance; it does not explicitly normalise `query` here because cosine
+/// ranking is scale-invariant.
 ///
 /// # Errors
 ///

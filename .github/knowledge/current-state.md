@@ -48,13 +48,12 @@
 - **Next:** Add InsertRequest, QueryRequest, SearchLocal messages
 
 ### Shard Crate (Data Plane)
-- **Stage 1 baseline:** Flat mmap storage, distance functions, brute-force search
+- **Stage 1 baseline:** Flat mmap storage, brute-force search over vectors
 - **Components:**
-  - `storage.rs`: `FlatVectorStore` (mmap-backed append-only, 32-byte header)
-  - `distance.rs`: L2/cosine distance with SIMD backend selection and scalar fallback
+  - `storage.rs`: `FlatVectorStore` (mmap-backed append-only, 32-byte header) with search using `common::distance` and `common::topk`
   - `state.rs`: `ShardState` async wrapper (tokio::sync::Mutex)
   - `main.rs`: tonic server, environment-based config (SHARD_ID, SHARD_ADDR, SHARD_STORE_PATH, SHARD_DIMENSION, SHARD_INITIAL_CAPACITY)
-- **Tests:** distance, storage, search, state (4 integration test files)
+- **Tests:** shard storage/search/state integration tests; shared distance/top-k tests live in `common/tests`
 - **Benchmarks:** Criterion search_topk @ 1k/10k/100k vectors, d=128/d=512
 
 ### Client Crate

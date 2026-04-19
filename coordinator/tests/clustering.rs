@@ -317,13 +317,13 @@ fn assign_rejects_empty_centroids() {
 #[test]
 fn assign_rejects_nprobe_zero() {
     let err = assign_to_shards(&[1.0, 0.0], &two_centroids(), 0, DistanceMetric::L2).unwrap_err();
-    assert!(matches!(err, ClusteringError::NprobeTooLarge { .. }));
+    assert!(matches!(err, ClusteringError::InvalidNprobe { .. }));
 }
 
 #[test]
 fn assign_rejects_nprobe_exceeds_centroid_count() {
     let err = assign_to_shards(&[1.0, 0.0], &two_centroids(), 3, DistanceMetric::L2).unwrap_err();
-    assert!(matches!(err, ClusteringError::NprobeTooLarge { nprobe: 3, n_centroids: 2 }));
+    assert!(matches!(err, ClusteringError::InvalidNprobe { .. }));
 }
 
 #[test]

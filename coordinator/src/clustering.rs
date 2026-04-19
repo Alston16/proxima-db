@@ -172,8 +172,9 @@ pub fn fit_kmeans(
             .collect::<Result<Vec<Vec<f32>>, ClusteringError>>()?;
         &owned
     } else {
-        // SAFETY: We borrow the inner slices in-place; no copy needed.
-        // We collect references but need owned Vec<f32> for uniform handling.
+        // Keep the non-cosine path in the same owned representation as the
+        // normalised cosine path, so downstream matrix construction can handle
+        // both branches uniformly. This clones each input vector.
         owned = vectors.iter().map(|v| v.data.clone()).collect();
         &owned
     };

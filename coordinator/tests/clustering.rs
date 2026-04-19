@@ -274,6 +274,12 @@ fn fit_cosine_returns_k_normalised_centroids() {
     assert_eq!(centroids.len(), 4);
     for c in &centroids {
         assert_eq!(c.data.len(), 16);
+        let norm = c.data.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!(
+            (norm - 1.0).abs() < 1e-4,
+            "expected cosine centroid to be L2-normalised, got norm {}",
+            norm
+        );
     }
 }
 

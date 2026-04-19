@@ -118,7 +118,7 @@ flowchart TD
 
 | Decision | V1 Choice | Future Options |
 |---|---|---|
-| Centroid updates | Static (fixed at init) | Streaming k-means, background re-clustering |
+| Centroid updates | Static (fixed at init) | Streaming k-means, background re-clustering, Linfa mini-batch k-means for large corpus refreshes |
 | Shard assignment | Top-2 soft assignment | Top-k soft, learned routing |
 | Partition skew | Ignored | Balanced k-means, split/merge on size trigger |
 | Border vector handling | Soft assignment covers it | Explicit replication radius |

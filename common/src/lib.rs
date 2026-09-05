@@ -1,6 +1,14 @@
 pub mod centroid_table;
 pub use centroid_table::CentroidTable;
 
+/// Distance metric selection and scalar/SIMD distance kernels.
+pub mod distance;
+/// Shared nearest-k selection helpers.
+pub mod topk;
+
+/// Re-exported for convenience — callers can use `common::DistanceMetric` directly.
+pub use distance::DistanceMetric;
+
 /// Unique identifier for a vector within the database.
 pub type VectorId = u64;
 

@@ -9,7 +9,7 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
-use shard::distance::DistanceMetric;
+use common::distance::DistanceMetric;
 use shard::storage::FlatVectorStore;
 use common::Vector;
 

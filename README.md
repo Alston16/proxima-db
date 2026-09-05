@@ -81,9 +81,9 @@ flowchart TD
 - [x] Benchmark single-node QPS and latency baseline
 
 ### Stage 2 — Centroid Table & Partition Assignment
-- [ ] Implement k-means clustering (`K` configurable, e.g. 64–512) on a training corpus using the `linfa` crate or a custom mini-batch k-means
+- [x] Implement k-means clustering (`K` configurable, e.g. 64–512) on a training corpus using the `linfa` crate or a custom mini-batch k-means
 - [ ] Build the `CentroidTable`: an in-memory struct mapping centroid ID → shard address, serializable to JSON/bincode for distribution to all nodes
-- [ ] Implement `assign_to_shards(vector, nprobe=2) -> Vec<ShardId>` — returns top-2 nearest centroid shards
+- [x] Implement `assign_to_shards(vector, nprobe=2) -> Vec<ShardId>` — returns top-2 nearest centroid shards
 - [ ] Unit test: verify that vectors cluster correctly and that border vectors are assigned to 2 shards
 
 ### Stage 3 — Staging Shard & Cold Start
@@ -118,7 +118,7 @@ flowchart TD
 
 | Decision | V1 Choice | Future Options |
 |---|---|---|
-| Centroid updates | Static (fixed at init) | Streaming k-means, background re-clustering |
+| Centroid updates | Static (fixed at init) | Streaming k-means, background re-clustering, Linfa mini-batch k-means for large corpus refreshes |
 | Shard assignment | Top-2 soft assignment | Top-k soft, learned routing |
 | Partition skew | Ignored | Balanced k-means, split/merge on size trigger |
 | Border vector handling | Soft assignment covers it | Explicit replication radius |

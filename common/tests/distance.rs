@@ -1,6 +1,6 @@
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
-use shard::distance::{
+use common::distance::{
     DistanceBackend, cosine_distance, cosine_distance_simd, cosine_distance_with_backend,
     l2_distance, l2_distance_simd, l2_distance_with_backend,
 };

@@ -4,7 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+common = { path = "../common" }
+linfa = { version = "0.7", default-features = false }
+linfa-clustering = "0.7"
+linfa-nn = "0.7"
+ndarray = "0.15"
 prost = "0.13"
+rand = "0.8"
+thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tonic = "0.12"
 

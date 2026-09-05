@@ -1,4 +1,3 @@
-use std::collections::BinaryHeap;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -6,9 +5,10 @@ use std::mem;
 use std::path::{Path, PathBuf};
 
 use common::{SearchResult, Vector, VectorId};
+use common::topk::select_topk_by_vector;
 use memmap2::MmapMut;
 
-use crate::distance::{self, DistanceMetric};
+use common::distance::DistanceMetric;
 
 const MAGIC: [u8; 8] = *b"PXVEC001";
 const VERSION: u32 = 1;
@@ -294,32 +294,12 @@ impl FlatVectorStore {
             return Ok(Vec::new());
         }
 
-        // Max-heap: top entry is the *worst* current candidate.
-        // When the heap is full we evict the worst if a better candidate appears.
-        let mut heap: BinaryHeap<Candidate> = BinaryHeap::with_capacity(k + 1);
+        let candidates = self.iter().map(|record| (record.id, record.data));
 
-        for record in self.iter() {
-            let d = match metric {
-                DistanceMetric::L2 => distance::l2_distance(query, record.data),
-                DistanceMetric::Cosine => distance::cosine_distance(query, record.data),
-            };
-            let candidate = Candidate { distance: d, id: record.id };
-            if heap.len() < k {
-                heap.push(candidate);
-            } else if let Some(worst) = heap.peek()
-                && candidate < *worst {
-                    heap.pop();
-                    heap.push(candidate);
-                }
-        }
-
-        let mut results: Vec<SearchResult> = heap
+        let results: Vec<SearchResult> = select_topk_by_vector(query, candidates, k, metric)
             .into_iter()
-            .map(|c| SearchResult { id: c.id, distance: c.distance })
+            .map(|(id, distance)| SearchResult { id, distance })
             .collect();
-        results.sort_unstable_by(|a, b| {
-            a.distance.total_cmp(&b.distance).then(a.id.cmp(&b.id))
-        });
         Ok(results)
     }
 
@@ -422,34 +402,6 @@ impl FlatVectorStore {
             .and_then(|offset| HEADER_SIZE.checked_add(offset))
             .ok_or(StorageError::RecordCountOverflow)?;
         Ok(record_start)
-    }
-}
-
-/// A candidate entry tracked inside the top-k search heap.
-///
-/// The [`Ord`] implementation ranks by descending quality: larger distance is
-/// "greater", so that a max-heap always exposes the *worst* current candidate
-/// at its top and makes eviction straightforward. Ties in distance are broken
-/// by larger [`VectorId`], so smaller IDs are retained after eviction.
-#[derive(PartialEq)]
-struct Candidate {
-    distance: f32,
-    id: VectorId,
-}
-
-impl Eq for Candidate {}
-
-impl PartialOrd for Candidate {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Candidate {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.distance
-            .total_cmp(&other.distance)
-            .then(self.id.cmp(&other.id))
     }
 }
 

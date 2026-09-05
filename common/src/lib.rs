@@ -1,3 +1,6 @@
+pub mod centroid_table;
+pub use centroid_table::CentroidTable;
+
 /// Distance metric selection and scalar/SIMD distance kernels.
 pub mod distance;
 /// Shared nearest-k selection helpers.

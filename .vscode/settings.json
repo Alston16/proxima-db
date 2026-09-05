@@ -1,7 +1,18 @@
 {
-  "rust-analyzer.cargo.allTargets": true,
-  "rust-analyzer.checkOnSave": true,
-  "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.procMacro.enable": true,
-  "rust-analyzer.cargo.buildScripts.enable": true
+    "rust-analyzer.cargo.allTargets": true,
+    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "chat.promptFilesRecommendations": {
+        "speckit.constitution": true,
+        "speckit.specify": true,
+        "speckit.plan": true,
+        "speckit.tasks": true,
+        "speckit.implement": true
+    },
+    "chat.tools.terminal.autoApprove": {
+        ".specify/scripts/bash/": true,
+        ".specify/scripts/powershell/": true
+    }
 }

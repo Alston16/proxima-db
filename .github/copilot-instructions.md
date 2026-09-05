@@ -269,3 +269,8 @@ The objective is to build a **self-improving Copilot environment** where:
 * Copilot becomes increasingly specialized for this repository
 
 Over time this repository should function as a **continuously evolving knowledge base that improves Copilot accuracy and usefulness**.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->

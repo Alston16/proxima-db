@@ -1,3 +1,6 @@
+pub mod centroid_table;
+pub use centroid_table::CentroidTable;
+
 /// Unique identifier for a vector within the database.
 pub type VectorId = u64;
 
